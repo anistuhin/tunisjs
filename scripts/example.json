@@ -1,0 +1,105 @@
+{
+    "props":
+    {
+        "shared":
+        {
+            "metrics": ["scroll75", "clickSegment"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "target": [
+        {
+            "url": "www.homepage.com",
+            "elements": ["#main", ".container"]
+        },
+        {
+            "url": "www.homepage.com/events/",
+            "elements": [".container"]
+        }],
+        "audience": ["lt520", "iPhone"]
+    },
+    "variations":
+    {
+        "v1":
+        {
+            "props": ["customEvent"],
+            "metrics": ["click"],
+            "poll":
+            {
+                "jQuery": true,
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "v2":
+        {
+            "metrics": ["pageview"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        }
+    }
+}
+
+====================================================================================================
+
+{
+    "props":
+    {
+        "shared":
+        {
+            "metrics": ["scroll75", "clickSegment"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "target": [
+        {
+            "url": "www.homepage.com",
+            "elements": ["#main", ".container"]
+        },
+        {
+            "url": "www.homepage.com/events/",
+            "elements": [".container"]
+        }],
+        "audience": ["lt520", "iPhone"]
+    }
+}
+
+==========================================================================================================
+
+{
+    
+    "variations":
+    {
+        "v1":
+        {
+            "props": ["customEvent"],
+            "metrics": ["click"],
+            "poll":
+            {
+                "jQuery": true,
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "v2":
+        {
+            "metrics": ["pageview"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        }
+    }
+}
+
+==========================================================================================================

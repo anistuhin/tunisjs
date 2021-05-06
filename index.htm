@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>tunis.js - the first AB Testing Framework</title>
+    <link rel="stylesheet" type="text/css" href="styles/primer.css">
+    <link rel="stylesheet" type="text/css" href="styles/github.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,700,900">
+    <link rel="stylesheet" type="text/css" href="styles/main.css">
+</head>
+
+<body>
+    <header id="top" class="header gradient text-center">
+        <h1 class="title">tunis.js</h1>
+        <h2 class="subtitle">A modern approach to write, share and reuse AB testing variation codes</h2>
+        <h2 class="subtitle">A class project for the course: 540 by Mark Grechanik</h2>
+        <p>Md Anisur Rahman (mrahma46)</p>
+        <div class="menu-bar gradient">
+            <p class="author"><a href="#why">Why</a> | <a href="#how">How</a> | <a class="special-item" href="#demo">Prototype</a> | <a href="#docs">Documentation</a> | <a class="special-item" href="#examples">Test Cases</a> | <a href="#metrics">Metrics</a> | <a href="#audiences">Audiences</a> | <a href="#future">Future</a></p>
+        </div>
+    </header>
+    <main class="wrap">
+        <div id="why">
+            <h1>Why</h1>
+            <p>Understanding basic AB Testing variation codes shouldn't be hard. It shouldn't require going through hundreds of lines of codes for hours. But most of all, one should be able to use a common config file across multiple experiments with options to plug-n-play conditional components from a community-backed repository.</p>
+            <p>That's why <code>tunis.js</code> exists.</p>
+        </div>
+        <div id="how">
+            <h1>How it works</h1>
+            <p>Lets take an example of an experiment that looks like this:</p>
+            <h3>Step 1: Experiment overview</h3>
+            <pre class="snippet"><code class="js hljs javascript">
+     experiment
+	 ├── shared
+	 |   ├── metrics
+	 |   |	 └── Custom
+	 |   └── poll
+	 |       └── Element
+	 ├── target
+	 |   └── homepage
+	 |       └── element
+	 ├── audience
+	 |   └── custom
+	 ├── variation-1
+	 |   |── metrics
+	 |   |	 └── Click
+	 |   └── poll
+	 |   	 |── JQuery
+	 |       └── Element
+	 └── variation-2
+	     |── metrics
+	     |   └── Pageview
+	     └── poll
+	         └── Element
+			</code></pre>
+            <h3>Step 2: JSON representation</h3>
+            <p>List your required variation related code requirements in a simple JSON(<a href="#docs">documentation</a>) like the following one:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#one">Copy to clipboard</button>
+            </div>
+            <pre id="one" class="snippet"><code class="js hljs javascript">
+{
+    "props":
+    {
+        "shared":
+        {
+            "metrics": ["scroll75", "clickSegment"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "target": [
+        {
+            "url": "www.homepage.com",
+            "elements": ["#main", ".container"]
+        },
+        {
+            "url": "www.homepage.com/events/",
+            "elements": [".container"]
+        }],
+        "audience": ["lt520", "iPhone"]
+    },
+    "variations":
+    {
+        "v1":
+        {
+            "props": ["customEvent"],
+            "metrics": ["click"],
+            "poll":
+            {
+                "jQuery": true,
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "v2":
+        {
+            "metrics": ["pageview"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        }
+    }
+}
+            </code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#one">Copy to clipboard</button>
+            </div>
+            <h3>Step 3: <span class="tunis">tunis.js</span> interpretation</h3>
+            <p>And <code>tunis.js</code> will interpret that in working executables like:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#two">Copy to clipboard</button>
+            </div>
+            <pre class="snippet" id="two"><code class="js hljs javascript"><!-- <span class="hljs-keyword">var</span> clipboard = <span class="hljs-keyword">new</span> ClipboardJS(<span class="hljs-string">'.btn'</span>);
+clipboard.on(<span class="hljs-string">'success'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>) </span>{
+    <span class="hljs-built_in">console</span>.info(<span class="hljs-string">'Action:'</span>, e.action);
+    <span class="hljs-built_in">console</span>.info(<span class="hljs-string">'Text:'</span>, e.text);
+    <span class="hljs-built_in">console</span>.info(<span class="hljs-string">'Trigger:'</span>, e.trigger);
+    e.clearSelection();
+});
+
+clipboard.on(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>) </span>{
+    <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Action:'</span>, e.action);
+    <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Trigger:'</span>, e.trigger);
+}); -->
+/// shared
+(function() {
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            try {
+                // clickSegment
+                window.optimizely = window.optimizely || []; // window['optimizely'] will be defined when run using the Optimizely tool
+                document.querySelector('#target').addEventListener('click', function() {
+                    optimizlyPushSegmentValue('true');
+                });
+
+                function optimizlyPushSegmentValue(value) {
+                    window["optimizely"].push({
+                        type: "user",
+                        attributes: {
+                            clickSegment: value
+                        }
+                    });
+                    window['optimizely'].push({ // an event push is always required to ensure a segment push as in optimizely data don't get sent until an event is fired
+                        type: "event",
+                        eventName: "tempEventForSegmentFire"
+                    });
+                }
+                // clickSegment
+                // scroll75
+                var $ = window.jQuery;
+                var scrollSeventyFive = true;
+                $(window).bind('scroll', function() {
+                    window.scrollPercent = ($(window).scrollTop() / ($(document).height() - $(window).height())) * 100;
+                    if (window.scrollPercent >= 50 && scrollSeventyFive) {
+                        window['optimizely'] = window['optimizely'] || [];
+                        window['optimizely'].push({
+                            type: "event",
+                            eventName: "scroll75"
+                        });
+                        scrollSeventyFive = false;
+                    }
+                });
+                // end: scroll75
+            } catch (err) {
+                console.log('Try error: ' + err);
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: shared
+
+// target
+(function() {
+    // url: www.homepage.com
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            return true;
+        } else {
+            setTimeout(pollFunction, 25);
+        }
+    })();
+    // end: url: www.homepage.com
+    // url: www.homepage.com/events/
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('.container').length) { // elements
+            return true;
+        } else {
+            setTimeout(pollFunction, 25);
+        }
+    })();
+    // end: url: www.homepage.com/events/
+})();
+// end: target
+
+// audience
+(function() {
+    // lt520
+    function isLt520() {
+        var w = screen.width || window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        if (w < 520) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    // end: lt520
+    // iPhone
+    function isIphone() {
+        var isIphone = !!navigator.platform && /iPhone/i.test(navigator.platform);
+        return isIphone;
+    }
+    // end: iPhone
+})();
+// end: audience
+
+// v1
+(function() {
+    var experimentName = {
+        init: function() {
+            this.mainJS(); // mainJS
+            this.mainCSS(); // mainCSS
+            this.customEvent(); // customEvent
+        },
+        mainCSS: function() { // mainCSS
+            var mainCSS = '';
+            var head = document.getElementsByTagName('head')[0];
+            var createTag = document.createElement('style');
+            createTag.setAttribute('type', 'text/css');
+            var createText = document.createTextNode(mainCSS);
+            createTag.appendChild(createText);
+            head.appendChild(createTag);
+        },
+        mainJS: function() { // mainJS
+            reload();
+
+            function reload() {} //keep all the codes that needs reload based different conditions
+            // click metrics, example case: Optimizely
+            var $ = window.jQuery;
+            window['optimizely'] = window['optimizely'] || []; // window['optimizely'] will be defined when run using the Optimizely tool
+            $(document).on('click', 'selectorName', function() {
+                window['optimizely'].push({
+                    type: "event",
+                    eventName: "eventName"
+                });
+            });
+            // end: click metrics, example case: Optimizely
+        },
+        customEvent: function() {} // customEvent
+    };
+    (function pollFunction() { // poll
+        if (window.jQuery !== undefined) {
+            var $ = window.jQuery;
+            if ($('#main').length && $('.container').length) { // elements
+                try {
+                    experimentName.init();
+                    console.log("experimentName: v1");
+                } catch (err) {
+                    console.log('Try error: ' + err);
+                }
+            } else {
+                setTimeout(pollFunction, 25); // timeout: 25
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: v1
+
+// v2
+(function() {
+    var experimentName = {
+        init: function() {
+            this.mainJS(); // mainJS
+            this.mainCSS(); // mainCSS
+        },
+        mainCSS: function() { // mainCSS
+            var mainCSS = '';
+            var head = document.getElementsByTagName('head')[0];
+            var createTag = document.createElement('style');
+            createTag.setAttribute('type', 'text/css');
+            var createText = document.createTextNode(mainCSS);
+            createTag.appendChild(createText);
+            head.appendChild(createTag);
+        },
+        mainJS: function() { // mainJS
+            reload();
+
+            function reload() {} //keep all the codes that needs reload based different conditions
+            // pageview metrics, example case: VWO
+            if (window.location.pathname.toLowerCase() == "/example-apge/") {
+                customMetricsTrigger(['pageID']); // pageID is an integer
+            }
+
+            function customMetricsTrigger(metricsIDList) {
+                metricsIDList.forEach(function(value) {
+                    window._vis_opt_queue.push(function() {
+                        _vis_opt_goal_conversion(value); // _vis_opt_goal_conversion will be defined when run using the VWO tool
+                    });
+                });
+            }
+            // end: pageview metrics, example case: VWO
+        }
+    };
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            try {
+                experimentName.init();
+                console.log("experimentName: v2");
+            } catch (err) {
+                console.log('Try error: ' + err);
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: v2
+
+</code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#two">Copy to clipboard</button>
+            </div>
+            <h3>Finally: realization</h3>
+            <p>This is how <code>tunis.js</code> makes it very very simple for anyone to just look at the config file and know what to expect. Or even compare it with the test plan to match if all the conditions were properly implemented in the code during conventional peer reviews. This example config file above only interprets the skeleton of an actual experiment while the real implementation begins after this step.</p>
+            <p>This shows how much code on average a Solution Engineer has to write every time there is an experiment to build. Think about 10-15 metrics with a few unknown scenarios, a few custom targeting conditions along with some custom audiences. And after that, the real variation implementations which make the codes sometimes reach thousands of lines for a simple experiment with only 2 variations. This makes the codes fairly complex to read with naked eyes. But this config file from <code>tunis.js</code> will address this problem very efficiently making it very easy for peer reviewers and also helping the Solution Engineers to get rid of this redundant process completely.</p>
+        </div>
+        <div id="demo">
+            <h1>Prototype</h1>
+            <p>Place your <code>tunis.js</code> config file here and click the interpret button to get an interpreted and usable AB testing code:</p>
+            <div class="example">
+                <div class="input-group">
+                    <textarea id="prot" cols="100" rows="15" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+{
+    "props":
+    {
+        "shared":
+        {
+            "metrics": ["scroll75", "clickSegment"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "target": [
+        {
+            "url": "www.homepage.com",
+            "elements": ["#main", ".container"]
+        },
+        {
+            "url": "www.homepage.com/events/",
+            "elements": [".container"]
+        }],
+        "audience": ["lt520", "iPhone"]
+    },
+    "variations":
+    {
+        "v1":
+        {
+            "props": ["customEvent"],
+            "metrics": ["click"],
+            "poll":
+            {
+                "jQuery": true,
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "v2":
+        {
+            "metrics": ["pageview"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        }
+    }
+}
+                    </textarea>
+                </div>
+                <div class="align-right">
+                    <button class="btn interpret" type="button">Interpret</button>
+                </div>
+            </div>
+        </div>
+        <div id="docs">
+            <h1>Documentation</h1>
+            <p>AB testing primarily revolves around many tools(i.e. Optimizely, Adobe Target, AB Tasty, VWO, Google Optimize, Monetate etc) but consists of some very common parts(custom Target, custom Audience, Shared codes, and Variation codes) that require manual cding from a Solution Engineer and <code>tunis.js</code> tries to work on these four main coding challenges only. Here is the list of keys used in the prototype:</p>
+            <h2>♥ props</h2>
+            <p>
+            	<b>Type:</b> <code>Object</code>(top level), <code>Array</code>(inner levels)<br/>
+            	<b>Values:</b> <code>shared</code>(top level), <code>target</code>(top level), <code>audience</code>(top level), <code>Function</code> as an Object property(inner levels)<br/>
+            	<b>Scope:</b> top level and inner level under <code>shared</code> and <code>variations</code><br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	<i>Top level: </i> Can be used as a top level key to define one of the three main coding components: Target, Shared and Audience.<br/>
+            	<i>Inner level:</i> Can be used as an inner level key to declare Functions as Object properties for the Shared and Variations codes only.
+            </p>
+            <h2>♥ files</h2>
+            <p>
+            	<b>Type:</b> <code>Boolean</code><br/>
+            	<b>Scope:</b> top level only<br/>
+            	<b>Default:</b> <code>false</code><br/>
+            	Can be used as a top level key only to tell the interpreter whether the codes should be divided into four different parts i.e. Target, Shared, Audience and Variations or not. <code>true</code> will return separate snippets of codes for each of those values provided in the top level <code>props</code> and <code>variations</code> key.
+            </p>
+            <h2>♥ shared</h2>
+            <p>
+            	<b>Type:</b> <code>Object</code><br/>
+            	<b>Values:</b> <code>props</code>, <code>metrics</code>, <code>poll</code><br/>
+            	<b>Scope:</b> the value of the top level <code>props</code> only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	Shared section of the experiments from all the tools. So basically act as a variation and can contain all the variations properties.
+            </p>
+            <h2>♥ target</h2>
+            <p>
+            	<b>Type:</b> <code>Array</code><br/>
+            	<b>Values:</b> Objets with different URLs and elements inside those URLs<br/>
+            	<b>Scope:</b> the value of the top level <code>props</code> only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	This is the custom Target section from all the conventional AB testing tools. As the tools already manage the URL, this section only manages the custom element-based conditions and keeps the URLs as a key so that they can be easily read by other Solutions Engineers during the peer review of the test plan requirements.
+            </p>
+            <h2>♥ audience</h2>
+            <p>
+            	<b>Type:</b> <code>Array</code><br/>
+            	<b>Values:</b> unique audience names as string<br/>
+            	<b>Scope:</b> the value of the top level <code>props</code> only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	This is the custom Audience section from all the conventional AB testing tools. This is where the community contribution kicks in like all other JS libraries for example npm packages. People can submit their own audiences based on different unique scenarios for easy portability and reusability. Use the audiences' unique names as values here from the <a href="#audiences">demo audiences</a>.
+            </p>
+            <h2>♥ metrics</h2>
+            <p>
+            	<b>Type:</b> <code>Array</code><br/>
+            	<b>Values:</b> unique metric names as string<br/>
+            	<b>Scope:</b> the value of <code>shared</code> and <code>variations</code> only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	This is the custom metrics section from all the conventional AB testing tools. This is where the community contribution kicks in like all other JS libraries for example npm packages. People can submit their own metrics based on different unique scenarios for easy portability and reusability. Use the metrics' unique names as values here from the <a href="#metrics">demo metrics</a>.
+            </p>
+            <h2>♥ poll</h2>
+            <p>
+            	<b>Type:</b> <code>Object</code><br/>
+            	<b>Values:</b> <code>jQuery</code>, <code>elements</code>, <code>timeout</code><br/>
+            	<b>Scope:</b> the value of <code>shared</code> and <code>variations</code> only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	This is the conventional poll function for an AB testing code snippet.
+            </p>
+            <h2>♥ jQuery</h2>
+            <p>
+            	<b>Type:</b> <code>Boolean</code><br/>
+            	<b>Scope:</b> the value of the <code>poll</code> key only<br/>
+            	<b>Default:</b> <code>false</code><br/>
+            	This tells whether the poll function should be dependant on jQuery or not. Timeout remains the same as the elements' dependency. As it's a dependency, if used, the <code>jquery</code> key must always be decalred before the <code>elements</code> key or it will fall back to the default value.
+            </p>
+            <h2>♥ elements</h2>
+            <p>
+            	<b>Type:</b> <code>Array</code><br/>
+            	<b>Values:</b> HTML elements CSS selector<br/>
+            	<b>Scope:</b> the value of <code>poll</code> and <code>target</code> only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	One can use the <code>elements</code> key to tell which elements the code is dependant on.
+            </p>
+            <h2>♥ timeout</h2>
+            <p>
+            	<b>Type:</b> <code>integer</code><br/>
+            	<b>Scope:</b> the value of the <code>poll</code> key only<br/>
+            	<b>Default:</b> <code>25</code><br/>
+            	<code>timeout</code> is used to set the timeout time for the poll. The value must be greater than zero otherwise the interpreter will use the default value.
+            </p>
+            <h2>♥ url</h2>
+            <p>
+            	<b>Type:</b> <code>string</code><br/>
+            	<b>Scope:</b> the value of the <code>target</code> key only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	This is the only key that is just used to separate target elements conditions and used to tell other engineers of the target URL conditions rather than doing anything inside the code as all the AB testing tools manage the URLs internally.
+            </p>
+            <h2>♥ variations</h2>
+            <p>
+            	<b>Type:</b> <code>Object</code><br/>
+            	<b>Values:</b> list of variations(i.e. A, B, C, V1, V2, V3 etc.) names as keys<br/>
+            	<b>Scope:</b> top level only<br/>
+            	<b>Default:</b> <code>null</code><br/>
+            	These are the variations codes used in all the conventional AB testing tools.
+            </p>
+        </div>
+        <div id="examples">
+            <h1>Test Cases</h1>
+            <h3>Case 1: JSON representation</h3>
+            <p>List your required variation related code requirements in a simple JSON(<a href="#docs">documentation</a>) like the following one:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-one">Copy to clipboard</button>
+            </div>
+            <pre id="case-one" class="snippet"><code class="js hljs javascript">
+{
+    "props":
+    {
+        "shared":
+        {
+            "metrics": ["scroll75", "clickSegment"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "target": [
+        {
+            "url": "www.homepage.com",
+            "elements": ["#main", ".container"]
+        },
+        {
+            "url": "www.homepage.com/events/",
+            "elements": [".container"]
+        }],
+        "audience": ["lt520", "iPhone"]
+    },
+    "variations":
+    {
+        "v1":
+        {
+            "props": ["customEvent"],
+            "metrics": ["click"],
+            "poll":
+            {
+                "jQuery": true,
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "v2":
+        {
+            "metrics": ["pageview"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        }
+    }
+}
+            </code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-one">Copy to clipboard</button>
+            </div>
+            <h3>Case 1: <span class="tunis">tunis.js</span> interpretation</h3>
+            <p>And <code>tunis.js</code> will interpret that in working executables like:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-one-two">Copy to clipboard</button>
+            </div>
+            <pre class="snippet" id="case-one-two"><code class="js hljs javascript">
+/// shared
+(function() {
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            try {
+                // clickSegment
+                window.optimizely = window.optimizely || []; // window['optimizely'] will be defined when run using the Optimizely tool
+                document.querySelector('#target').addEventListener('click', function() {
+                    optimizlyPushSegmentValue('true');
+                });
+
+                function optimizlyPushSegmentValue(value) {
+                    window["optimizely"].push({
+                        type: "user",
+                        attributes: {
+                            clickSegment: value
+                        }
+                    });
+                    window['optimizely'].push({ // an event push is always required to ensure a segment push as in optimizely data don't get sent until an event is fired
+                        type: "event",
+                        eventName: "tempEventForSegmentFire"
+                    });
+                }
+                // clickSegment
+                // scroll75
+                var $ = window.jQuery;
+                var scrollSeventyFive = true;
+                $(window).bind('scroll', function() {
+                    window.scrollPercent = ($(window).scrollTop() / ($(document).height() - $(window).height())) * 100;
+                    if (window.scrollPercent >= 50 && scrollSeventyFive) {
+                        window['optimizely'] = window['optimizely'] || [];
+                        window['optimizely'].push({
+                            type: "event",
+                            eventName: "scroll75"
+                        });
+                        scrollSeventyFive = false;
+                    }
+                });
+                // end: scroll75
+            } catch (err) {
+                console.log('Try error: ' + err);
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: shared
+
+// target
+(function() {
+    // url: www.homepage.com
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            return true;
+        } else {
+            setTimeout(pollFunction, 25);
+        }
+    })();
+    // end: url: www.homepage.com
+    // url: www.homepage.com/events/
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('.container').length) { // elements
+            return true;
+        } else {
+            setTimeout(pollFunction, 25);
+        }
+    })();
+    // end: url: www.homepage.com/events/
+})();
+// end: target
+
+// audience
+(function() {
+    // lt520
+    function isLt520() {
+        var w = screen.width || window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        if (w < 520) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    // end: lt520
+    // iPhone
+    function isIphone() {
+        var isIphone = !!navigator.platform && /iPhone/i.test(navigator.platform);
+        return isIphone;
+    }
+    // end: iPhone
+})();
+// end: audience
+
+// v1
+(function() {
+    var experimentName = {
+        init: function() {
+            this.mainJS(); // mainJS
+            this.mainCSS(); // mainCSS
+            this.customEvent(); // customEvent
+        },
+        mainCSS: function() { // mainCSS
+            var mainCSS = '';
+            var head = document.getElementsByTagName('head')[0];
+            var createTag = document.createElement('style');
+            createTag.setAttribute('type', 'text/css');
+            var createText = document.createTextNode(mainCSS);
+            createTag.appendChild(createText);
+            head.appendChild(createTag);
+        },
+        mainJS: function() { // mainJS
+            reload();
+
+            function reload() {} //keep all the codes that needs reload based different conditions
+            // click metrics, example case: Optimizely
+            var $ = window.jQuery;
+            window['optimizely'] = window['optimizely'] || []; // window['optimizely'] will be defined when run using the Optimizely tool
+            $(document).on('click', 'selectorName', function() {
+                window['optimizely'].push({
+                    type: "event",
+                    eventName: "eventName"
+                });
+            });
+            // end: click metrics, example case: Optimizely
+        },
+        customEvent: function() {} // customEvent
+    };
+    (function pollFunction() { // poll
+        if (window.jQuery !== undefined) {
+            var $ = window.jQuery;
+            if ($('#main').length && $('.container').length) { // elements
+                try {
+                    experimentName.init();
+                    console.log("experimentName: v1");
+                } catch (err) {
+                    console.log('Try error: ' + err);
+                }
+            } else {
+                setTimeout(pollFunction, 25); // timeout: 25
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: v1
+
+// v2
+(function() {
+    var experimentName = {
+        init: function() {
+            this.mainJS(); // mainJS
+            this.mainCSS(); // mainCSS
+        },
+        mainCSS: function() { // mainCSS
+            var mainCSS = '';
+            var head = document.getElementsByTagName('head')[0];
+            var createTag = document.createElement('style');
+            createTag.setAttribute('type', 'text/css');
+            var createText = document.createTextNode(mainCSS);
+            createTag.appendChild(createText);
+            head.appendChild(createTag);
+        },
+        mainJS: function() { // mainJS
+            reload();
+
+            function reload() {} //keep all the codes that needs reload based different conditions
+            // pageview metrics, example case: VWO
+            if (window.location.pathname.toLowerCase() == "/example-apge/") {
+                customMetricsTrigger(['pageID']); // pageID is an integer
+            }
+
+            function customMetricsTrigger(metricsIDList) {
+                metricsIDList.forEach(function(value) {
+                    window._vis_opt_queue.push(function() {
+                        _vis_opt_goal_conversion(value); // _vis_opt_goal_conversion will be defined when run using the VWO tool
+                    });
+                });
+            }
+            // end: pageview metrics, example case: VWO
+        }
+    };
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            try {
+                experimentName.init();
+                console.log("experimentName: v2");
+            } catch (err) {
+                console.log('Try error: ' + err);
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: v2
+
+</code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-one-two">Copy to clipboard</button>
+            </div>
+            <h3>Case 2: JSON representation</h3>
+            <p>List your required variation related code requirements in a simple JSON(<a href="#docs">documentation</a>) like the following one:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-two">Copy to clipboard</button>
+            </div>
+            <pre id="case-two" class="snippet"><code class="js hljs javascript">
+{
+    "props":
+    {
+        "shared":
+        {
+            "metrics": ["scroll75", "clickSegment"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "target": [
+        {
+            "url": "www.homepage.com",
+            "elements": ["#main", ".container"]
+        },
+        {
+            "url": "www.homepage.com/events/",
+            "elements": [".container"]
+        }],
+        "audience": ["lt520", "iPhone"]
+    }
+}
+            </code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-two">Copy to clipboard</button>
+            </div>
+            <h3>Case 2: <span class="tunis">tunis.js</span> interpretation</h3>
+            <p>And <code>tunis.js</code> will interpret that in working executables like:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-two-two">Copy to clipboard</button>
+            </div>
+            <pre class="snippet" id="case-two-two"><code class="js hljs javascript">
+/// shared
+(function() {
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            try {
+                // clickSegment
+                window.optimizely = window.optimizely || []; // window['optimizely'] will be defined when run using the Optimizely tool
+                document.querySelector('#target').addEventListener('click', function() {
+                    optimizlyPushSegmentValue('true');
+                });
+
+                function optimizlyPushSegmentValue(value) {
+                    window["optimizely"].push({
+                        type: "user",
+                        attributes: {
+                            clickSegment: value
+                        }
+                    });
+                    window['optimizely'].push({ // an event push is always required to ensure a segment push as in optimizely data don't get sent until an event is fired
+                        type: "event",
+                        eventName: "tempEventForSegmentFire"
+                    });
+                }
+                // clickSegment
+                // scroll75
+                var $ = window.jQuery;
+                var scrollSeventyFive = true;
+                $(window).bind('scroll', function() {
+                    window.scrollPercent = ($(window).scrollTop() / ($(document).height() - $(window).height())) * 100;
+                    if (window.scrollPercent >= 50 && scrollSeventyFive) {
+                        window['optimizely'] = window['optimizely'] || [];
+                        window['optimizely'].push({
+                            type: "event",
+                            eventName: "scroll75"
+                        });
+                        scrollSeventyFive = false;
+                    }
+                });
+                // end: scroll75
+            } catch (err) {
+                console.log('Try error: ' + err);
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: shared
+
+// target
+(function() {
+    // url: www.homepage.com
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            return true;
+        } else {
+            setTimeout(pollFunction, 25);
+        }
+    })();
+    // end: url: www.homepage.com
+    // url: www.homepage.com/events/
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('.container').length) { // elements
+            return true;
+        } else {
+            setTimeout(pollFunction, 25);
+        }
+    })();
+    // end: url: www.homepage.com/events/
+})();
+// end: target
+
+// audience
+(function() {
+    // lt520
+    function isLt520() {
+        var w = screen.width || window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        if (w < 520) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    // end: lt520
+    // iPhone
+    function isIphone() {
+        var isIphone = !!navigator.platform && /iPhone/i.test(navigator.platform);
+        return isIphone;
+    }
+    // end: iPhone
+})();
+// end: audience
+</code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-two-two">Copy to clipboard</button>
+            </div>
+            <h3>Case 3: JSON representation</h3>
+            <p>List your required variation related code requirements in a simple JSON(<a href="#docs">documentation</a>) like the following one:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-three">Copy to clipboard</button>
+            </div>
+            <pre id="case-three" class="snippet"><code class="js hljs javascript">
+{
+    "variations":
+    {
+        "v1":
+        {
+            "props": ["customEvent"],
+            "metrics": ["click"],
+            "poll":
+            {
+                "jQuery": true,
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        },
+        "v2":
+        {
+            "metrics": ["pageview"],
+            "poll":
+            {
+                "elements": ["#main", ".container"],
+                "timeout": 25
+            }
+        }
+    }
+}
+            </code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-three">Copy to clipboard</button>
+            </div>
+            <h3>Case 3: <span class="tunis">tunis.js</span> interpretation</h3>
+            <p>And <code>tunis.js</code> will interpret that in working executables like:</p>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-three-two">Copy to clipboard</button>
+            </div>
+            <pre class="snippet" id="case-three-two"><code class="js hljs javascript">
+// v1
+(function() {
+    var experimentName = {
+        init: function() {
+            this.mainJS(); // mainJS
+            this.mainCSS(); // mainCSS
+            this.customEvent(); // customEvent
+        },
+        mainCSS: function() { // mainCSS
+            var mainCSS = '';
+            var head = document.getElementsByTagName('head')[0];
+            var createTag = document.createElement('style');
+            createTag.setAttribute('type', 'text/css');
+            var createText = document.createTextNode(mainCSS);
+            createTag.appendChild(createText);
+            head.appendChild(createTag);
+        },
+        mainJS: function() { // mainJS
+            reload();
+
+            function reload() {} //keep all the codes that needs reload based different conditions
+            // click metrics, example case: Optimizely
+            var $ = window.jQuery;
+            window['optimizely'] = window['optimizely'] || []; // window['optimizely'] will be defined when run using the Optimizely tool
+            $(document).on('click', 'selectorName', function() {
+                window['optimizely'].push({
+                    type: "event",
+                    eventName: "eventName"
+                });
+            });
+            // end: click metrics, example case: Optimizely
+        },
+        customEvent: function() {} // customEvent
+    };
+    (function pollFunction() { // poll
+        if (window.jQuery !== undefined) {
+            var $ = window.jQuery;
+            if ($('#main').length && $('.container').length) { // elements
+                try {
+                    experimentName.init();
+                    console.log("experimentName: v1");
+                } catch (err) {
+                    console.log('Try error: ' + err);
+                }
+            } else {
+                setTimeout(pollFunction, 25); // timeout: 25
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: v1
+
+// v2
+(function() {
+    var experimentName = {
+        init: function() {
+            this.mainJS(); // mainJS
+            this.mainCSS(); // mainCSS
+        },
+        mainCSS: function() { // mainCSS
+            var mainCSS = '';
+            var head = document.getElementsByTagName('head')[0];
+            var createTag = document.createElement('style');
+            createTag.setAttribute('type', 'text/css');
+            var createText = document.createTextNode(mainCSS);
+            createTag.appendChild(createText);
+            head.appendChild(createTag);
+        },
+        mainJS: function() { // mainJS
+            reload();
+
+            function reload() {} //keep all the codes that needs reload based different conditions
+            // pageview metrics, example case: VWO
+            if (window.location.pathname.toLowerCase() == "/example-apge/") {
+                customMetricsTrigger(['pageID']); // pageID is an integer
+            }
+
+            function customMetricsTrigger(metricsIDList) {
+                metricsIDList.forEach(function(value) {
+                    window._vis_opt_queue.push(function() {
+                        _vis_opt_goal_conversion(value); // _vis_opt_goal_conversion will be defined when run using the VWO tool
+                    });
+                });
+            }
+            // end: pageview metrics, example case: VWO
+        }
+    };
+    (function pollFunction() { // poll
+        if (document.querySelectorAll('#main').length && document.querySelectorAll('.container').length) { // elements
+            try {
+                experimentName.init();
+                console.log("experimentName: v2");
+            } catch (err) {
+                console.log('Try error: ' + err);
+            }
+        } else {
+            setTimeout(pollFunction, 25); // timeout: 25
+        }
+    })();
+})();
+// end: v2
+
+</code></pre>
+            <div class="align-right">
+                <button class="btn tbtn" type="button" data-clipboard data-clipboard-target="#case-three-two">Copy to clipboard</button>
+            </div>
+        </div>
+        <div id="metrics">
+            <h1>Metrics</h1>
+            <p>This part in the main framework will be open for users to register and upload custom metrics with unique keys which can be used by all users just like the npm packages. Here is the list of metrics used in the prototype:</p>
+            <h2>clickSegment</h2>
+            <p>This metric is'nt an actual a metric rather an Optimizely segment for the reporting tool. Segments are events too in the Optimizely tool, so can easily be used as a metric in <code>tunis.js</code> configuration. It registers a user click.</p>
+            <pre class="snippet" id="two"><code class="js hljs javascript">
+// clickSegment
+window.optimizely = window.optimizely || []; // window['optimizely'] will be defined when run using the Optimizely tool
+document.querySelector('#target').addEventListener('click', function() {
+    optimizlyPushSegmentValue('true');
+});
+
+function optimizlyPushSegmentValue(value) {
+    window["optimizely"].push({
+        type: "user",
+        attributes: {
+            clickSegment: value
+        }
+    });
+    window['optimizely'].push({ // an event push is always required to ensure a segment push as in optimizely data don't get sent until an event is fired
+        type: "event",
+        eventName: "tempEventForSegmentFire"
+    });
+}
+// clickSegment
+            </code></pre>
+            <h2>scroll75</h2>
+            <p>This metric is used to measure if a user has scrolled past at least 75% of the page. The example below is used for Optimizely events.</p>
+            <pre class="snippet" id="two"><code class="js hljs javascript">
+// scroll75
+var $ = window.jQuery;
+var scrollSeventyFive = true;
+$(window).bind('scroll', function() {
+    window.scrollPercent = ($(window).scrollTop() / ($(document).height() - $(window).height())) * 100;
+    if (window.scrollPercent >= 50 && scrollSeventyFive) {
+        window['optimizely'] = window['optimizely'] || [];
+        window['optimizely'].push({
+            type: "event",
+            eventName: "scroll75"
+        });
+        scrollSeventyFive = false;
+    }
+});
+// end: scroll75
+            </code></pre>
+            <h2>click</h2>
+            <p>This is a conventional <code>click</code> metric. The example here is based on the tool: Optimizely</p>
+            <pre class="snippet" id="two"><code class="js hljs javascript">
+// click metrics, example case: Optimizely
+var $ = window.jQuery;
+window['optimizely'] = window['optimizely'] || []; // window['optimizely'] will be defined when run using the Optimizely tool
+$(document).on('click', 'selectorName', function() {
+    window['optimizely'].push({
+        type: "event",
+        eventName: "eventName"
+    });
+});
+// end: click metrics, example case: Optimizely
+            </code></pre>
+            <h2>pageview</h2>
+            <p>This is a conventional <code>pageview</code> metric. The example here is based on the tool: VWO</p>
+            <pre class="snippet" id="two"><code class="js hljs javascript">
+// pageview metrics, example case: VWO
+if (window.location.pathname.toLowerCase() == "/example-apge/") {
+    customMetricsTrigger(['pageID']); // pageID is an integer
+}
+
+function customMetricsTrigger(metricsIDList) {
+    metricsIDList.forEach(function(value) {
+        window._vis_opt_queue.push(function() {
+            _vis_opt_goal_conversion(value); // _vis_opt_goal_conversion will be defined when run using the VWO tool
+        });
+    });
+}
+// end: pageview metrics, example case: VWO
+            </code></pre>
+        </div>
+        <div id="audiences">
+            <h1>Audiences</h1>
+            <p>This part in the main framework will be open for users to register and upload custom audiences with unique keys which can be used by all users just like the npm packages. Here is the list of audiences used in the prototype:</p>
+            <h2>lt520</h2>
+            <p>This is a custom audience used to detect devices with screen widths less than 520px.</p>
+            <pre class="snippet" id="two"><code class="js hljs javascript">
+// lt520
+function isLt520() {
+    var w = screen.width || window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    if (w < 520) {
+        return true;
+    } else {
+        return false;
+    }
+}
+// end: lt520
+            </code></pre>
+            <h2>iPhone</h2>
+            <p>This is a custom audience to determine if a user is coming from an iPhone device or not.</p>
+            <pre class="snippet" id="two"><code class="js hljs javascript">
+// iPhone
+function isIphone() {
+    var isIphone = !!navigator.platform && /iPhone/i.test(navigator.platform);
+    return isIphone;
+}
+// end: iPhone
+            </code></pre>
+        </div>
+        <div id="future">
+            <h1>Future</h1>
+            <ul>
+            	<li><p>This is only a prototype while the real implementation will be software with file read, write, and manipulation features as used in conventional AB testing coding environments</p></li>
+            	<li><p>Command-line support like all conventional frameworks</p></li>
+            	<li><p>Hidden lock configs from the codes do reverse engineering on existing codebases</p></li>
+                <li><p>Parent config rules for all the tests with localized config files for each individual experiment</p></li>
+            	<li><p>Channel for custom metrics submission will be developed</p></li>
+            	<li><p>Channel for custom audience submission will be developed</p></li>
+            	<li><p>Conditional keys like <code>and</code> & <code>or</code> will be introduced for complex <code>target</code> and <code>poll</code> conditions</p></li>
+            	<li><p>Nested conditions for the poll function  fuwill be added to build complex code execution dependencies</p></li>
+            	<li><p>JSON validator will be added to the config editor with a colored theme</p></li>
+            	<li><p>UIs for users with non-coding background with drag and drop capabilities</li>
+            </ul>
+        </div>
+    </main>
+    <footer class="footer gradient text-center">
+        <p class="credits">Made with <span class="love">♥</span> by <a class="footer-link" target="_blank" href="https://www.linkedin.com/in/anistuhin/">Md Anisur Rahman (mrahma46)</a></p>
+        <a id="back-to-top" class="btn" href="#top">Back to top 🠕</a>
+    </footer>
+    <script type="text/javascript" src="scripts/jquery.min.js"></script>
+    <script type="text/javascript" src="scripts/clipboard.min.js"></script>
+    <script type="text/javascript" src="scripts/tunis.js"></script>
+    <script type="text/javascript" src="scripts/init.js"></script>
+</body>
+
+</html>
